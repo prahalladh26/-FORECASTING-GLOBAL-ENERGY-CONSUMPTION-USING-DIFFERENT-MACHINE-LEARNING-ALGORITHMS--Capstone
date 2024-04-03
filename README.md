@@ -1,0 +1,2 @@
+# -FORECASTING-GLOBAL-ENERGY-CONSUMPTION-USING-DIFFERENT-MACHINE-LEARNING-ALGORITHMS--Capstone
+Forecasting global energy consumption is a crucial task for policymakers, energy  companies, and investors as it helps in making informed decisions regarding energy  production and consumption. In this topic, we will explore  the application of various machine learning algorithms for forecasting global energy  consumption.
