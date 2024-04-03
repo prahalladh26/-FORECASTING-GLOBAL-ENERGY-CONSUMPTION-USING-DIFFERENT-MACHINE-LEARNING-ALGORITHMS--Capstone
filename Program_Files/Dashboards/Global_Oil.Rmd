@@ -1,0 +1,123 @@
+---
+title: "Global Oil Consumption"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+#Loading of Data set 
+Data <- read.csv(file.choose(),header = TRUE)
+#Viewing the Data
+View(Data)
+
+#Using the library dplyr filtering the data 
+#loading the library 
+library(dplyr)
+dde1= Data%>%select(country,year,population,gdp,oil_electricity,oil_production,oil_consumption)
+dde1 <- dde1[complete.cases(dde1),]%>% filter(year >= 1990 & year <=2018) %>% filter(oil_consumption > 0)
+#dde1[!(apply(dde1, 1, function(y) any(y == 0))),]
+#View(dde1[!complete.cases(dde1),])
+View(dde1)
+summary(dde1)
+str(dde1)
+dde <- dde1[,-1:-2] #removing  both Country and year column
+View(dde)
+
+#Normalizing the values 
+normalize <- function(x) {
+  return((x - min(x)) / (max(x) - min(x)))
+}
+
+dde_norm <- as.data.frame(lapply(dde, normalize))
+dde_norm <- cbind(dde1[,2],dde_norm)
+colnames(dde_norm)[1]<-("Year")
+summary(dde_norm)
+View(dde_norm)
+
+#selecting the random test and train values
+set.seed(1234)
+ind <- sample(2, nrow(dde_norm), replace = T, prob = c(0.7, 0.3))
+dde_train <- dde_norm[ind == 1,]
+dde_test <- dde_norm[ind == 2,]
+
+str(dde_test)
+View(dde_test)
+summary(dde_test)
+View(dde_train)
+
+# training a model on the above data
+library(neuralnet)
+
+
+dde_model <- neuralnet(oil_consumption~., data = dde_train[,-1])
+dde_model
+
+dde_test_0 <- dde_test %>% filter(oil_consumption >0.03)
+View(dde_test_0)
+summary(dde_test_0)
+
+# model results
+
+model_results <- compute(dde_model,dde_test_0[,-6])
+model_results 
+
+(predicted_cons <- model_results$net.result)
+cor(dde_test_0$oil_consumption, predicted_cons)
+
+
+VALIDATION=table(dde_test_0[,6],predicted_cons)
+(ACCURACY=sum(diag(VALIDATION))/sum(VALIDATION)*100)
+
+
+View(dde_test)
+summary(dde_test)
+
+
+
+
+
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Predicted Yearly Oil Consumption
+
+```{r}
+## Predicted Yearly Double-line Chart 
+
+library(ggplot2)
+(Line<- ggplot(dde_test_0
+                        , aes(Year,oil_consumption)) +
+            geom_point() +
+            scale_x_continuous(breaks = seq(1994, 2018, by = 4)) +
+            xlab("Year") +
+            ylab("Coal Consumption") +
+            ggtitle("Year Wise Prediction"))
+
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Actual vs Predicted values by model
+
+```{r}
+
+# Actual vs Predicted 
+data_mod <- data.frame(Year = dde_test_0[,1],Predicted = predicted_cons,
+                       Actual = dde_test_0[,6])
+View(data_mod)
+ggplot(data_mod, aes(Year)) +  
+  geom_line(aes(y = Actual, color = "Actual"),size = 1.5) +
+  geom_line(aes(y = Predicted,color = "Predicted"),size = 1.5)+
+  scale_color_manual(values = c("Actual" = "red", "Predicted" = "blue"))+
+  scale_x_continuous(breaks = seq(1994, 2018, by = 4)) +
+  xlab("Year") +
+  ylab("Values") +
+  ggtitle("Actual vs Predicted Values")
+```
+
